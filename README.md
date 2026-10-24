@@ -5,6 +5,8 @@ Web-based e-voting with face recognition + liveness, device-bound fingerprint ve
 The University of Lahore.
 
 Scope, design rules and build phases: [PROJECT_BRIEF.md](PROJECT_BRIEF.md).
+Full documentation (API, architecture diagrams, design decisions, security review, demo
+walkthrough): [docs/](docs/README.md).
 
 ## Layout
 

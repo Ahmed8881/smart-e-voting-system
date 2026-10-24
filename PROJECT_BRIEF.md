@@ -17,6 +17,8 @@ it can be defended at the viva.
 
 ---
 
+**Status (2026-10-24):** Phases 0–10 implemented and committed. See `docs/` for the result.
+
 ## 1. Working rules
 
 - Build in the phases in §10, **one phase at a time**. At the end of each phase: stop, summarise
