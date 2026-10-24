@@ -5,6 +5,7 @@ const links = [
   { to: '/admin/elections', label: 'Elections' },
   { to: '/admin/voters', label: 'Voters' },
   { to: '/admin/recovery', label: 'Device recovery' },
+  { to: '/admin/fraud', label: 'Fraud alerts' },
   { to: '/admin/audit-log', label: 'Audit log' },
   { to: '/admin/settings', label: 'Settings' },
 ]

@@ -7,6 +7,7 @@ import { Prisma } from '../../generated/prisma/client.js'
 import { authOf, requireRole } from '../../middleware/auth.js'
 import { parse } from '../../lib/validate.js'
 import { isAcceptingVotes } from '../elections/lifecycle.js'
+import { raiseAlert } from '../fraud/fraud.service.js'
 import { getResults, getTurnout } from '../results/results.service.js'
 
 const idSchema = z.object({ id: z.uuid() })
@@ -125,15 +126,13 @@ export function votingRouter({ db, config }: Deps) {
       })
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-        await db.fraudAlert.create({
-          data: {
-            voterId,
-            electionId,
-            type: 'REPEAT_VOTE_ATTEMPT',
-            severity: 'MEDIUM',
-            description: 'A voter tried to vote again in an election they already voted in',
-            details: { ip: req.ip ?? null },
-          },
+        await raiseAlert(db, {
+          voterId,
+          electionId,
+          type: 'REPEAT_VOTE_ATTEMPT',
+          severity: 'MEDIUM',
+          description: 'A voter tried to vote again in an election they already voted in',
+          details: { ip: req.ip ?? null },
         })
         throw new ApiError(409, 'ALREADY_VOTED', 'You have already voted in this election')
       }

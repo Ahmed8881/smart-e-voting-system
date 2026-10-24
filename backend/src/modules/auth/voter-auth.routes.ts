@@ -15,6 +15,8 @@ import { decryptEmbedding } from '../../lib/faceCrypto.js'
 import { parse } from '../../lib/validate.js'
 import { appendAudit } from '../audit/audit.service.js'
 import { consumeChallenge, issueChallenge } from '../face/face.service.js'
+import { scoreLogin } from '../fraud/anomaly.js'
+import { raiseAlert, recordAuthEvent } from '../fraud/fraud.service.js'
 import { getSettings } from '../settings/settings.js'
 import { CNIC_PATTERN, framesSchema } from '../voters/registration.routes.js'
 import { issueSession, signFaceToken, verifyFaceToken, type FaceStepNext } from './tokens.js'
@@ -68,8 +70,8 @@ export function voterAuthRouter(deps: Deps) {
   router.post('/face', async (req, res) => {
     const { cnic, challengeToken, frames } = parse(faceSchema, req.body)
     const info = clientInfo(req, res)
-    const event = (success: boolean, voterId?: string, type = 'FACE') =>
-      db.authEvent.create({ data: { type, success, cnicAttempted: cnic, voterId, ...info } })
+    const event = (success: boolean, voterId?: string, type: 'FACE' | 'LIVENESS' = 'FACE') =>
+      recordAuthEvent(deps, { type, success, cnicAttempted: cnic, voterId, ...info })
     const notVerified = new ApiError(401, 'FACE_NOT_VERIFIED', 'Face verification failed')
 
     const voter = await db.voter.findUnique({ where: { cnic }, include: { faceTemplate: true } })
@@ -100,6 +102,7 @@ export function voterAuthRouter(deps: Deps) {
       throw notVerified
     }
     await event(true, voter.id)
+    await scoreLogin(deps, voter, info, result.similarity)
 
     const activeCredentials = await db.webAuthnCredential.count({
       where: { voterId: voter.id, revokedAt: null },
@@ -137,7 +140,7 @@ export function voterAuthRouter(deps: Deps) {
     const voterId = verifyFaceToken(config, faceToken, 'WEBAUTHN_LOGIN')
     const info = clientInfo(req, res)
     const event = (success: boolean) =>
-      db.authEvent.create({ data: { type: 'WEBAUTHN', success, voterId, ...info } })
+      recordAuthEvent(deps, { type: 'WEBAUTHN', success, voterId, ...info })
     const failed = new ApiError(401, 'WEBAUTHN_FAILED', 'Device verification failed')
 
     const voter = await activeVoter(deps, voterId)
@@ -330,15 +333,13 @@ async function reportClonedCredential(
   detail: string,
   info: { ip: string; deviceHash: string },
 ) {
-  await db.fraudAlert.create({
-    data: {
-      voterId,
-      type: 'WEBAUTHN_COUNTER_REGRESSION',
-      severity: 'HIGH',
-      description:
-        'Device signature counter did not increase — the credential may have been cloned',
-      details: { credentialRowId: credentialId, detail, ip: info.ip, deviceHash: info.deviceHash },
-    },
+  // HIGH: locks the account until an admin reviews it.
+  await raiseAlert(db, {
+    voterId,
+    type: 'WEBAUTHN_COUNTER_REGRESSION',
+    severity: 'HIGH',
+    description: 'Device signature counter did not increase — the credential may have been cloned',
+    details: { credentialRowId: credentialId, detail, ip: info.ip, deviceHash: info.deviceHash },
   })
 }
 

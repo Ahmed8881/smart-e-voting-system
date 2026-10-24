@@ -103,7 +103,7 @@ describe('POST /api/voters/register', () => {
     expect(res.status).toBe(422)
     expect(res.body.error.code).toBe('LIVENESS_FAILED')
     expect(await db.voter.count()).toBe(0)
-    expect(await db.authEvent.count({ where: { type: 'REGISTRATION', success: false } })).toBe(1)
+    expect(await db.authEvent.count({ where: { type: 'LIVENESS', success: false } })).toBe(1)
   })
 
   test('the same face registering again under new details → 409 + HIGH fraud alert', async () => {

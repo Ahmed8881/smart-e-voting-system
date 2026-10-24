@@ -71,6 +71,7 @@ python -m venv .venv
 # source .venv/bin/activate   # macOS / Linux
 pip install -r requirements-dev.txt
 python scripts/download_models.py            # ~43 MB, checksum-verified
+python scripts/generate_synthetic.py         # trains the fraud anomaly model (synthetic data)
 uvicorn app.main:app --env-file ../.env --port 8001    # http://localhost:8001/health
 ```
 

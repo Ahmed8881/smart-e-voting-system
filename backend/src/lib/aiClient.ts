@@ -1,5 +1,6 @@
 import type { Config } from '../config.js'
 import { ApiError } from '../errors.js'
+import type { LoginFeatures } from '../modules/fraud/anomaly.js'
 
 export type LivenessAction = 'BLINK' | 'TURN_LEFT' | 'TURN_RIGHT'
 
@@ -23,6 +24,7 @@ export type VerifyResult = CaptureResult & { similarity: number | null }
 
 export type AiClient = {
   challenge(): Promise<Challenge>
+  score(features: LoginFeatures): Promise<{ score: number; modelVersion: string }>
   enrol(challengeToken: string, frames: string[]): Promise<EnrolResult>
   verify(
     challengeToken: string,
@@ -60,6 +62,7 @@ export function createAiClient(config: Config): AiClient {
 
   return {
     challenge: () => call('/liveness/challenge'),
+    score: (features) => call('/fraud/score', features),
     enrol: (challengeToken, frames) => call('/face/enrol', { challengeToken, frames }),
     verify: (challengeToken, frames, referenceEmbedding) =>
       call('/face/verify', { challengeToken, frames, referenceEmbedding }),

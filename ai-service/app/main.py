@@ -19,6 +19,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from app.anomaly import AnomalyModel, load_model
 from app.face_engine import MODEL_VERSION, FaceEngine
 from app.liveness import ChallengeError, evaluate, issue_challenge, parse_challenge
 
@@ -66,10 +67,18 @@ def challenge_secret() -> bytes:
     return hashlib.sha256(b"liveness-challenge:" + service_token().encode()).digest()
 
 
+def models_dir() -> Path:
+    return Path(os.environ.get("MODELS_DIR", Path(__file__).parent.parent / "models"))
+
+
+@lru_cache
+def anomaly_model() -> AnomalyModel | None:
+    return load_model(models_dir())
+
+
 @lru_cache
 def engine() -> FaceEngine:
-    models_dir = Path(os.environ.get("MODELS_DIR", Path(__file__).parent.parent / "models"))
-    return FaceEngine(models_dir)
+    return FaceEngine(models_dir())
 
 
 def require_service_token(x_service_token: Annotated[str | None, Header()] = None) -> None:
@@ -180,3 +189,27 @@ def verify(req: VerifyRequest):
     probe = result.pop("embedding")  # the backend needs only the score, not the probe vector
     similarity = None if probe is None else round(float(decode_embedding(probe) @ reference), 4)
     return {**result, "similarity": similarity}
+
+
+class LoginFeatures(BaseModel):
+    """One login's behaviour. Ranges reject nonsense before it reaches the model."""
+
+    hour_of_day: int = Field(ge=0, le=23)
+    failed_attempts_last_hour: int = Field(ge=0, le=10_000)
+    new_device: bool
+    new_ip: bool
+    accounts_on_device_24h: int = Field(ge=0, le=10_000)
+    days_since_registration: float = Field(ge=0, le=36_500)
+    face_similarity: float = Field(ge=-1, le=1)
+
+
+@app.post("/fraud/score", dependencies=[Authed])
+def fraud_score(features: LoginFeatures):
+    """Anomaly score 0..1 (higher = more unusual). Alerts only — the backend never blocks on it."""
+    model = anomaly_model()
+    if model is None:
+        raise ApiError(
+            503, "MODEL_NOT_TRAINED", "Run scripts/generate_synthetic.py to train the model"
+        )
+    values = {k: float(v) for k, v in features.model_dump().items()}
+    return {"score": round(model.score(values), 4), "modelVersion": model.version}

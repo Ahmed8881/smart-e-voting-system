@@ -6,6 +6,7 @@ import AdminLoginPage from './pages/admin/AdminLoginPage.tsx'
 import AuditLogPage from './pages/admin/AuditLogPage.tsx'
 import ElectionDetailPage from './pages/admin/ElectionDetailPage.tsx'
 import ElectionsPage from './pages/admin/ElectionsPage.tsx'
+import FraudAlertsPage from './pages/admin/FraudAlertsPage.tsx'
 import RecoveryPage from './pages/admin/RecoveryPage.tsx'
 import SettingsPage from './pages/admin/SettingsPage.tsx'
 import VotersPage from './pages/admin/VotersPage.tsx'
@@ -63,6 +64,7 @@ export default function App() {
                 <Route path="elections" element={<ElectionsPage />} />
                 <Route path="elections/:id" element={<ElectionDetailPage />} />
                 <Route path="voters" element={<VotersPage />} />
+                <Route path="fraud" element={<FraudAlertsPage />} />
                 <Route path="recovery" element={<RecoveryPage />} />
                 <Route path="audit-log" element={<AuditLogPage />} />
                 <Route path="settings" element={<SettingsPage />} />

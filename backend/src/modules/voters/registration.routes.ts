@@ -10,6 +10,7 @@ import { encryptEmbedding } from '../../lib/faceCrypto.js'
 import { parse } from '../../lib/validate.js'
 import { appendAudit } from '../audit/audit.service.js'
 import { consumeChallenge, findMatchingFace, issueChallenge } from '../face/face.service.js'
+import { raiseAlert, recordAuthEvent } from '../fraud/fraud.service.js'
 import { getSettings } from '../settings/settings.js'
 
 export const CNIC_PATTERN = /^\d{5}-\d{7}-\d$/
@@ -48,10 +49,11 @@ export function registrationRouter(deps: Deps) {
   router.post('/', async (req, res) => {
     const input = parse(registerSchema, req.body)
     const info = clientInfo(req, res)
-    const event = (success: boolean, voterId?: string) =>
-      db.authEvent.create({
-        data: { type: 'REGISTRATION', success, cnicAttempted: input.cnic, voterId, ...info },
-      })
+    const event = (
+      success: boolean,
+      voterId?: string,
+      type: 'REGISTRATION' | 'LIVENESS' = 'REGISTRATION',
+    ) => recordAuthEvent(deps, { type, success, cnicAttempted: input.cnic, voterId, ...info })
 
     // Cheap uniqueness check first, so an obvious duplicate doesn't cost a face analysis.
     // The unique constraints below are what actually guarantee it under concurrency.
@@ -60,7 +62,7 @@ export function registrationRouter(deps: Deps) {
     const result = await ai.enrol(input.challengeToken, input.frames)
     await consumeChallenge(deps, result.nonce, 'REGISTRATION')
     if (!result.live || !result.embedding) {
-      await event(false)
+      await event(false, undefined, 'LIVENESS')
       throw new ApiError(422, 'LIVENESS_FAILED', livenessMessage(result.reason))
     }
 
@@ -69,21 +71,20 @@ export function registrationRouter(deps: Deps) {
     const duplicate = await findMatchingFace(deps, embedding, settings['face.matchThreshold'])
     if (duplicate) {
       await event(false)
-      await db.fraudAlert.create({
-        data: {
-          type: 'DUPLICATE_FACE_REGISTRATION',
-          severity: 'HIGH',
-          score: duplicate.similarity,
-          description: 'A new registration matched the face of an existing voter',
-          details: {
-            matchedVoterId: duplicate.voterId,
-            similarity: duplicate.similarity,
-            attemptedEmail: input.email,
-            ip: info.ip,
-            deviceHash: info.deviceHash,
-          },
-          voterId: duplicate.voterId,
+      // HIGH: also locks the existing account until an admin has looked at it.
+      await raiseAlert(db, {
+        type: 'DUPLICATE_FACE_REGISTRATION',
+        severity: 'HIGH',
+        score: duplicate.similarity,
+        description: 'A new registration matched the face of an existing voter',
+        details: {
+          matchedVoterId: duplicate.voterId,
+          similarity: duplicate.similarity,
+          attemptedEmail: input.email,
+          ip: info.ip,
+          deviceHash: info.deviceHash,
         },
+        voterId: duplicate.voterId,
       })
       // Deliberately vague: don't confirm to the registrant whose face it matched.
       throw new ApiError(409, 'DUPLICATE_FACE', 'This person appears to be registered already')

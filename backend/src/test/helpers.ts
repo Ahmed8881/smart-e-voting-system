@@ -44,6 +44,8 @@ export function personEmbedding(person: number): string {
 export class FakeAi implements AiClient {
   person = 1
   live = true
+  anomalyScore = 0.1
+  scoreCalls: unknown[] = []
   reason: string | null = null
   calls = 0
 
@@ -55,6 +57,11 @@ export class FakeAi implements AiClient {
       actions: ['BLINK' as const, 'TURN_LEFT' as const],
       expiresAt: Math.floor(Date.now() / 1000) + 120,
     }
+  }
+
+  async score(features: unknown) {
+    this.scoreCalls.push(features)
+    return { score: this.anomalyScore, modelVersion: 'test' }
   }
 
   async enrol(token: string, frames: string[]): Promise<EnrolResult> {
