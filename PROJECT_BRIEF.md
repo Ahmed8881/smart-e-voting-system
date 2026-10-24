@@ -158,7 +158,8 @@ N, M, K and thresholds come from `SystemSetting` and are editable in UC-14.
 
 ## 8. API (REST, JSON, prefix `/api`)
 
-Auth: `POST /auth/admin/login`, `POST /auth/refresh`, `POST /auth/logout`,
+Auth: `POST /auth/admin/login` (password → emails OTP), `POST /auth/admin/otp` (→ tokens),
+`POST /auth/refresh`, `POST /auth/logout`,
 `POST /auth/voter/face` (step 1), `POST /auth/voter/webauthn/options`,
 `POST /auth/voter/webauthn/verify` (step 2 → tokens).
 
@@ -166,7 +167,7 @@ Voter: `POST /voters/register`, `POST /voters/me/webauthn/register/options|verif
 `GET /elections/active`, `GET /elections/:id/candidates`, `POST /elections/:id/vote`,
 `GET /me/participation`, `GET /elections/:id/results` (published only), recovery endpoints (Phase 4).
 
-Admin: CRUD `/admin/elections`, `/admin/elections/:id/candidates`,
+Admin: `GET /admin/me`, CRUD `/admin/elections`, `/admin/elections/:id/candidates`,
 `POST /admin/elections/:id/{schedule|open|close|publish}`, `GET /admin/elections/:id/turnout`,
 `GET /admin/voters?status=`, `POST /admin/voters/:id/{approve|suspend|unlock}`,
 `GET /admin/fraud-alerts`, `PATCH /admin/fraud-alerts/:id`, `GET /admin/audit-log`,
@@ -251,10 +252,10 @@ FYP report can replace Figs 4.2 and 4.5.
 - **Q1 (before Phase 7) — live results.** The SRS asks for real-time per-candidate results; this brief
   embargoes them (D4). Has the advisor accepted that? If not, the fallback is a per-election
   `liveResults` flag, off by default, with the risk written up.
-- **Q2 (before Phase 1) — OTP.** The architecture diagram (Fig 4.1, module 3.2) lists "OTP verification"
+- **Q2 — OTP. Decided (default): (b), email OTP for admin login.** Original question: The architecture diagram (Fig 4.1, module 3.2) lists "OTP verification"
   and the SRS glossary defines OTP, but no use case uses it. Options: (a) drop it and note that WebAuthn
   replaces it, (b) email OTP as a second factor for **admin** login. Recommendation: (b) — it's cheap and
   matches the diagram. In dev, emails go to a local Mailpit container.
-- **Q3 (before Phase 1) — deviceHash.** Confirm the definition in §6.
+- **Q3 — deviceHash. Decided (default): definition in §6.**
 - **Q4 (before Phase 1) — MySQL.** Docker Desktop is not installed on the dev machine. Phase 1 needs MySQL 8,
   either via Docker Desktop (`docker compose up -d`) or a local MySQL 8 install.

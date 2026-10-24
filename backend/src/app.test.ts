@@ -1,8 +1,8 @@
 import request from 'supertest'
 import { describe, expect, test } from 'vitest'
-import { createApp } from './app.js'
+import { testApp } from './test/helpers.js'
 
-const app = createApp()
+const { app } = testApp()
 
 describe('GET /api/health', () => {
   test('returns ok', async () => {
@@ -11,9 +11,18 @@ describe('GET /api/health', () => {
     expect(res.body).toEqual({ status: 'ok', service: 'backend' })
   })
 
-  test('does not advertise Express', async () => {
+  test('sends security headers and does not advertise Express', async () => {
     const res = await request(app).get('/api/health')
     expect(res.headers['x-powered-by']).toBeUndefined()
+    expect(res.headers['x-content-type-options']).toBe('nosniff')
+    expect(res.headers['content-security-policy']).toBeDefined()
+  })
+
+  test('allows only the configured CORS origin', async () => {
+    const ok = await request(app).get('/api/health').set('Origin', 'http://localhost:5173')
+    expect(ok.headers['access-control-allow-origin']).toBe('http://localhost:5173')
+    const evil = await request(app).get('/api/health').set('Origin', 'https://evil.example')
+    expect(evil.headers['access-control-allow-origin']).not.toBe('https://evil.example')
   })
 })
 

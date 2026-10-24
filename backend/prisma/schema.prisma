@@ -1,0 +1,270 @@
+// Data model for the Smart E-Voting System. See PROJECT_BRIEF.md §5–§6.
+// Ballot secrecy: Participation (who voted) and Ballot (what was chosen) share NO key and NO timestamp.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum Role {
+  ADMIN
+  VOTER
+}
+
+enum VoterStatus {
+  PENDING
+  APPROVED
+  SUSPENDED
+  LOCKED
+}
+
+enum ElectionStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  CLOSED
+  PUBLISHED
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum AlertStatus {
+  OPEN
+  REVIEWED
+  DISMISSED
+}
+
+model Admin {
+  id           String   @id @default(uuid()) @db.Char(36)
+  name         String   @db.VarChar(120)
+  email        String   @unique @db.VarChar(254)
+  passwordHash String   @db.VarChar(100)
+  role         Role     @default(ADMIN)
+  createdAt    DateTime @default(now()) @db.DateTime(3)
+
+  elections      Election[]
+  candidates     Candidate[]
+  approvedVoters Voter[]      @relation("ApprovedBy")
+  reviewedAlerts FraudAlert[]
+  otpChallenges  AdminOtp[]
+}
+
+model Voter {
+  id           String      @id @default(uuid()) @db.Char(36)
+  name         String      @db.VarChar(120)
+  email        String      @unique @db.VarChar(254)
+  cnic         String      @unique @db.Char(15)
+  status       VoterStatus @default(PENDING)
+  approvedById String?     @db.Char(36)
+  createdAt    DateTime    @default(now()) @db.DateTime(3)
+
+  approvedBy     Admin?               @relation("ApprovedBy", fields: [approvedById], references: [id])
+  faceTemplate   FaceTemplate?
+  credentials    WebAuthnCredential[]
+  participations Participation[]
+  authEvents     AuthEvent[]
+  fraudAlerts    FraudAlert[]
+
+  @@index([status])
+}
+
+/// AES-256-GCM encrypted face embedding. Plaintext never touches the database.
+model FaceTemplate {
+  id                  String   @id @default(uuid()) @db.Char(36)
+  voterId             String   @unique @db.Char(36)
+  embeddingCiphertext Bytes    @db.Blob
+  iv                  Bytes    @db.Binary(12)
+  authTag             Bytes    @db.Binary(16)
+  modelVersion        String   @db.VarChar(64)
+  createdAt           DateTime @default(now()) @db.DateTime(3)
+
+  voter Voter @relation(fields: [voterId], references: [id], onDelete: Cascade)
+}
+
+/// WebAuthn credential (replaces a fingerprint template — see deviation D1).
+model WebAuthnCredential {
+  id           String    @id @default(uuid()) @db.Char(36)
+  voterId      String    @db.Char(36)
+  credentialId String    @unique @db.VarChar(512)
+  publicKey    Bytes     @db.Blob
+  signCount    Int       @db.UnsignedInt
+  transports   Json
+  createdAt    DateTime  @default(now()) @db.DateTime(3)
+  revokedAt    DateTime? @db.DateTime(3)
+
+  voter Voter @relation(fields: [voterId], references: [id], onDelete: Cascade)
+
+  @@index([voterId])
+}
+
+model Election {
+  id          String         @id @default(uuid()) @db.Char(36)
+  title       String         @db.VarChar(200)
+  description String         @db.Text
+  startsAt    DateTime       @db.DateTime(3)
+  endsAt      DateTime       @db.DateTime(3)
+  status      ElectionStatus @default(DRAFT)
+  createdById String         @db.Char(36)
+  createdAt   DateTime       @default(now()) @db.DateTime(3)
+
+  createdBy      Admin           @relation(fields: [createdById], references: [id])
+  candidates     Candidate[]
+  participations Participation[]
+  ballots        Ballot[]
+  tallies        ResultTally[]
+  fraudAlerts    FraudAlert[]
+
+  @@index([status])
+}
+
+model Candidate {
+  id          String  @id @default(uuid()) @db.Char(36)
+  electionId  String  @db.Char(36)
+  name        String  @db.VarChar(120)
+  party       String  @db.VarChar(120)
+  symbolUrl   String? @db.VarChar(500)
+  createdById String  @db.Char(36)
+
+  election  Election      @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  createdBy Admin         @relation(fields: [createdById], references: [id])
+  ballots   Ballot[]
+  tallies   ResultTally[]
+
+  @@index([electionId])
+}
+
+/// WHO voted. The composite primary key is what enforces one-person-one-vote.
+model Participation {
+  voterId    String   @db.Char(36)
+  electionId String   @db.Char(36)
+  votedAt    DateTime @default(now()) @db.DateTime(3)
+
+  voter    Voter    @relation(fields: [voterId], references: [id])
+  election Election @relation(fields: [electionId], references: [id])
+
+  @@id([voterId, electionId])
+  @@index([electionId])
+}
+
+/// WHAT was chosen. No voter link and no timestamp. `id` is a random UUIDv4 generated in
+/// application code — never auto-increment or time-ordered — so it can't reveal cast order.
+model Ballot {
+  id          String @id @db.Char(36)
+  electionId  String @db.Char(36)
+  candidateId String @db.Char(36)
+
+  election  Election  @relation(fields: [electionId], references: [id])
+  candidate Candidate @relation(fields: [candidateId], references: [id])
+
+  @@index([electionId, candidateId])
+}
+
+model ResultTally {
+  electionId  String   @db.Char(36)
+  candidateId String   @db.Char(36)
+  voteCount   Int      @db.UnsignedInt
+  computedAt  DateTime @default(now()) @db.DateTime(3)
+
+  election  Election  @relation(fields: [electionId], references: [id])
+  candidate Candidate @relation(fields: [candidateId], references: [id])
+
+  @@id([electionId, candidateId])
+}
+
+model AuthEvent {
+  id            String   @id @default(uuid()) @db.Char(36)
+  voterId       String?  @db.Char(36)
+  cnicAttempted String?  @db.Char(15)
+  type          String   @db.VarChar(40)
+  success       Boolean
+  ip            String   @db.VarChar(45)
+  userAgent     String   @db.VarChar(500)
+  deviceHash    String?  @db.Char(64)
+  createdAt     DateTime @default(now()) @db.DateTime(3)
+
+  voter Voter? @relation(fields: [voterId], references: [id])
+
+  @@index([cnicAttempted, createdAt])
+  @@index([deviceHash, createdAt])
+  @@index([ip, createdAt])
+}
+
+model FraudAlert {
+  id           String      @id @default(uuid()) @db.Char(36)
+  voterId      String?     @db.Char(36)
+  electionId   String?     @db.Char(36)
+  type         String      @db.VarChar(60)
+  severity     Severity
+  score        Float?
+  description  String      @db.VarChar(500)
+  details      Json
+  status       AlertStatus @default(OPEN)
+  createdAt    DateTime    @default(now()) @db.DateTime(3)
+  reviewedById String?     @db.Char(36)
+  reviewedAt   DateTime?   @db.DateTime(3)
+
+  voter      Voter?    @relation(fields: [voterId], references: [id])
+  election   Election? @relation(fields: [electionId], references: [id])
+  reviewedBy Admin?    @relation(fields: [reviewedById], references: [id])
+
+  @@index([status, createdAt])
+}
+
+/// Append-only, hash-chained: hash = SHA-256(prevHash + canonical row content).
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  actorType String   @db.VarChar(20)
+  actorId   String?  @db.VarChar(64)
+  action    String   @db.VarChar(80)
+  payload   Json
+  prevHash  String   @db.Char(64)
+  hash      String   @unique @db.Char(64)
+  createdAt DateTime @db.DateTime(3)
+}
+
+/// Single row (id = 1) locked FOR UPDATE on every append, so concurrent appends can't fork the chain.
+model AuditChainHead {
+  id       Int    @id
+  lastHash String @db.Char(64)
+}
+
+model SystemSetting {
+  key   String @id @db.VarChar(80)
+  value String @db.VarChar(500)
+}
+
+/// Opaque refresh tokens, stored hashed. Rotated on every use; reuse of a rotated token revokes all.
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Char(36)
+  tokenHash String    @unique @db.Char(64)
+  role      Role
+  subjectId String    @db.Char(36)
+  expiresAt DateTime  @db.DateTime(3)
+  revokedAt DateTime? @db.DateTime(3)
+  createdAt DateTime  @default(now()) @db.DateTime(3)
+
+  @@index([role, subjectId])
+}
+
+/// Second factor for admin login (architecture Fig 4.1, "OTP verification").
+model AdminOtp {
+  id         String    @id @default(uuid()) @db.Char(36)
+  adminId    String    @db.Char(36)
+  codeHash   String    @db.Char(64)
+  attempts   Int       @default(0)
+  expiresAt  DateTime  @db.DateTime(3)
+  consumedAt DateTime? @db.DateTime(3)
+  createdAt  DateTime  @default(now()) @db.DateTime(3)
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+}

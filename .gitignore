@@ -33,3 +33,5 @@ Thumbs.db
 # FYP source documents (contain personal contact details) — kept locally, not in the repo
 FYP Proposal.pdf
 finalzzzzz.pdf
+backend/src/generated/
+backend/.dev-mail/
