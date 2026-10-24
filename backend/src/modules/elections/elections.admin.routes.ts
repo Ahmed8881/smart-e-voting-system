@@ -6,6 +6,7 @@ import type { Prisma } from '../../generated/prisma/client.js'
 import { authOf } from '../../middleware/auth.js'
 import { parse } from '../../lib/validate.js'
 import { appendAudit } from '../audit/audit.service.js'
+import { computeTally, getResults, getTurnout } from '../results/results.service.js'
 import { ACTIONS, decideTransition, isEditable } from './lifecycle.js'
 
 const isoDate = z.iso.datetime({ offset: true }).transform((v) => new Date(v))
@@ -114,6 +115,7 @@ export function adminElectionsRouter({ db }: Deps) {
         const decision = decideTransition({ ...election, candidateCount }, action, new Date())
         if (!decision.ok) throw new ApiError(409, decision.code, decision.message)
         const result = await tx.election.update({ where: { id }, data: { status: decision.to } })
+        if (decision.to === 'CLOSED') await computeTally(tx, id)
         await audit(tx, adminId, `ELECTION_${decision.to}`, {
           electionId: id,
           from: election.status,
@@ -124,6 +126,29 @@ export function adminElectionsRouter({ db }: Deps) {
       res.json(updated)
     })
   }
+
+  // Live turnout: allowed at any time, because it reveals no choices.
+  router.get('/:id/turnout', async (req, res) => {
+    const { id } = parse(idSchema, req.params)
+    const election = await db.election.findUnique({ where: { id } })
+    if (!election) throw notFound()
+    res.json(await getTurnout(db, id, election.eligibleAtClose))
+  })
+
+  // Per-candidate results only once voting has closed — admins can check them before publishing.
+  router.get('/:id/results', async (req, res) => {
+    const { id } = parse(idSchema, req.params)
+    const election = await db.election.findUnique({ where: { id } })
+    if (!election) throw notFound()
+    if (election.status !== 'CLOSED' && election.status !== 'PUBLISHED') {
+      throw new ApiError(409, 'RESULTS_HIDDEN', 'Results are hidden until voting closes')
+    }
+    res.json({
+      status: election.status,
+      turnout: await getTurnout(db, id, election.eligibleAtClose),
+      ...(await getResults(db, id)),
+    })
+  })
 
   // Candidates — only while the election is DRAFT or SCHEDULED.
   router.post('/:id/candidates', async (req, res) => {

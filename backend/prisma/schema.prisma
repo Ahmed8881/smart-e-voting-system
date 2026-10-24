@@ -106,14 +106,16 @@ model WebAuthnCredential {
 }
 
 model Election {
-  id          String         @id @default(uuid()) @db.Char(36)
-  title       String         @db.VarChar(200)
-  description String         @db.Text
-  startsAt    DateTime       @db.DateTime(3)
-  endsAt      DateTime       @db.DateTime(3)
-  status      ElectionStatus @default(DRAFT)
-  createdById String         @db.Char(36)
-  createdAt   DateTime       @default(now()) @db.DateTime(3)
+  id              String         @id @default(uuid()) @db.Char(36)
+  title           String         @db.VarChar(200)
+  description     String         @db.Text
+  startsAt        DateTime       @db.DateTime(3)
+  endsAt          DateTime       @db.DateTime(3)
+  status          ElectionStatus @default(DRAFT)
+  createdById     String         @db.Char(36)
+  createdAt       DateTime       @default(now()) @db.DateTime(3)
+  /// Approved voters when voting closed — the turnout denominator, frozen so it can't drift later.
+  eligibleAtClose Int?           @db.UnsignedInt
 
   createdBy      Admin           @relation(fields: [createdById], references: [id])
   candidates     Candidate[]

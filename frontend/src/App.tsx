@@ -13,6 +13,7 @@ import HomePage from './pages/HomePage.tsx'
 import LoginPage from './pages/LoginPage.tsx'
 import RegisterPage from './pages/RegisterPage.tsx'
 import BallotPage from './pages/voter/BallotPage.tsx'
+import ResultsPage from './pages/voter/ResultsPage.tsx'
 import VoterHomePage from './pages/voter/VoterHomePage.tsx'
 import VoterLayout from './pages/voter/VoterLayout.tsx'
 
@@ -38,6 +39,7 @@ export default function App() {
                 <Route element={<VoterLayout />}>
                   <Route index element={<VoterHomePage />} />
                   <Route path="elections/:id" element={<BallotPage />} />
+                  <Route path="elections/:id/results" element={<ResultsPage />} />
                 </Route>
               </Routes>
             </RequireVoter>

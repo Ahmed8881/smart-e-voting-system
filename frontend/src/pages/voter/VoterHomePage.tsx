@@ -14,21 +14,25 @@ type ActiveElection = {
   open: boolean
 }
 type Participation = { id: string; title: string; status: string; votedAt: string }
+type Published = { id: string; title: string; endsAt: string }
 
 /** UC-03 View Ongoing Elections + UC-07 View Vote History. */
 export default function VoterHomePage() {
   const [elections, setElections] = useState<ActiveElection[] | null>(null)
   const [history, setHistory] = useState<Participation[] | null>(null)
+  const [published, setPublished] = useState<Published[]>([])
   const [error, setError] = useState('')
 
   useEffect(() => {
     Promise.all([
       api<ActiveElection[]>('/elections/active'),
       api<Participation[]>('/me/participation'),
+      api<Published[]>('/elections/published'),
     ])
-      .then(([e, h]) => {
+      .then(([e, h, p]) => {
         setElections(e)
         setHistory(h)
+        setPublished(p)
       })
       .catch((err) => setError(errorMessage(err)))
   }, [])
@@ -69,6 +73,21 @@ export default function VoterHomePage() {
           )}
         </ul>
       </section>
+
+      {published.length > 0 && (
+        <section>
+          <h2 className="mb-3 text-lg font-semibold">Results</h2>
+          <ul className="space-y-1">
+            {published.map((p) => (
+              <li key={p.id}>
+                <Link to={`/voter/elections/${p.id}/results`} className="underline">
+                  {p.title}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section>
         <h2 className="mb-3 text-lg font-semibold">Your voting history</h2>

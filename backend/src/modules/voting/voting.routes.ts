@@ -7,6 +7,7 @@ import { Prisma } from '../../generated/prisma/client.js'
 import { authOf, requireRole } from '../../middleware/auth.js'
 import { parse } from '../../lib/validate.js'
 import { isAcceptingVotes } from '../elections/lifecycle.js'
+import { getResults, getTurnout } from '../results/results.service.js'
 
 const idSchema = z.object({ id: z.uuid() })
 const voteSchema = z.object({ candidateId: z.uuid() })
@@ -36,6 +37,17 @@ export function votingRouter({ db, config }: Deps) {
     res.json(elections.map((e) => ({ ...e, hasVoted: voted.has(e.id), open: e.startsAt <= now })))
   })
 
+  // Elections whose results have been published, newest first.
+  router.get('/published', async (_req, res) => {
+    res.json(
+      await db.election.findMany({
+        where: { status: 'PUBLISHED' },
+        orderBy: { endsAt: 'desc' },
+        select: { id: true, title: true, endsAt: true },
+      }),
+    )
+  })
+
   // UC-04: the ballot.
   router.get('/:id/candidates', async (req, res) => {
     const { id } = parse(idSchema, req.params)
@@ -61,6 +73,23 @@ export function votingRouter({ db, config }: Deps) {
         endsAt: rest.endsAt,
       },
       candidates,
+    })
+  })
+
+  // UC-06 View Results — only after an admin has published them.
+  router.get('/:id/results', async (req, res) => {
+    const { id } = parse(idSchema, req.params)
+    const election = await db.election.findUnique({ where: { id } })
+    if (!election || election.status === 'DRAFT')
+      throw new ApiError(404, 'NOT_FOUND', 'Election not found')
+    if (election.status !== 'PUBLISHED') {
+      throw new ApiError(403, 'RESULTS_NOT_PUBLISHED', 'Results have not been published yet')
+    }
+    const { consistent: _internal, ...results } = await getResults(db, id)
+    res.json({
+      election: { id: election.id, title: election.title, endsAt: election.endsAt },
+      turnout: await getTurnout(db, id, election.eligibleAtClose),
+      ...results,
     })
   })
 

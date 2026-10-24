@@ -4,6 +4,7 @@ import { Button, ErrorText, Field } from '../../components/ui.tsx'
 import { api, errorMessage, post } from '../../lib/api.ts'
 import { formatDateTime } from '../../lib/dates.ts'
 import { STATUS_BADGE, type ElectionStatus } from '../../lib/elections.ts'
+import ElectionOutcome from './ElectionOutcome.tsx'
 
 type Candidate = { id: string; name: string; party: string; symbolUrl: string | null }
 type Election = {
@@ -115,6 +116,8 @@ export default function ElectionDetailPage() {
       </div>
 
       <ErrorText>{error}</ErrorText>
+
+      <ElectionOutcome id={election.id} status={election.status} />
 
       <div>
         <h2 className="mb-2 font-semibold">Candidates ({election.candidates.length})</h2>
