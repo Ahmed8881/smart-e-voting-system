@@ -1,0 +1,35 @@
+# Dependencies & builds
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.pyc
+
+# Secrets & local config — never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Downloaded ML models and generated data
+ai-service/models/
+ai-service/data/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log
+
+# FYP source documents (contain personal contact details) — kept locally, not in the repo
+FYP Proposal.pdf
+finalzzzzz.pdf
