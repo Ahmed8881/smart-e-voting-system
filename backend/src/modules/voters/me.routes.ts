@@ -17,5 +17,15 @@ export function meRouter({ db, config }: Deps) {
     res.json(voter)
   })
 
+  // UC-07: participation only — which elections and when, never the candidate (brief §5.8).
+  router.get('/participation', async (req, res) => {
+    const rows = await db.participation.findMany({
+      where: { voterId: authOf(req).sub },
+      orderBy: { votedAt: 'desc' },
+      select: { votedAt: true, election: { select: { id: true, title: true, status: true } } },
+    })
+    res.json(rows.map((r) => ({ ...r.election, votedAt: r.votedAt })))
+  })
+
   return router
 }

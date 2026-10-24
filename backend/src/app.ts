@@ -13,6 +13,7 @@ import { adminAuthRouter } from './modules/auth/admin-auth.routes.js'
 import { sessionRouter } from './modules/auth/session.routes.js'
 import { voterAuthRouter, voterEnrolRouter } from './modules/auth/voter-auth.routes.js'
 import { meRouter } from './modules/voters/me.routes.js'
+import { votingRouter } from './modules/voting/voting.routes.js'
 import { registrationRouter } from './modules/voters/registration.routes.js'
 import { healthRouter } from './routes/health.js'
 
@@ -54,6 +55,7 @@ export function createApp(deps: Deps) {
   app.use('/api/voters/register', registrationRouter(deps))
   app.use('/api/voters/me/webauthn', voterEnrolRouter(deps))
   app.use('/api/me', meRouter(deps))
+  app.use('/api/elections', votingRouter(deps))
   app.use('/api/admin', adminRouter(deps))
 
   app.use(notFound)

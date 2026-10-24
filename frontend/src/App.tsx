@@ -12,7 +12,9 @@ import VotersPage from './pages/admin/VotersPage.tsx'
 import HomePage from './pages/HomePage.tsx'
 import LoginPage from './pages/LoginPage.tsx'
 import RegisterPage from './pages/RegisterPage.tsx'
+import BallotPage from './pages/voter/BallotPage.tsx'
 import VoterHomePage from './pages/voter/VoterHomePage.tsx'
+import VoterLayout from './pages/voter/VoterLayout.tsx'
 
 export default function App() {
   return (
@@ -32,7 +34,12 @@ export default function App() {
         element={
           <VoterAuthProvider>
             <RequireVoter>
-              <VoterHomePage />
+              <Routes>
+                <Route element={<VoterLayout />}>
+                  <Route index element={<VoterHomePage />} />
+                  <Route path="elections/:id" element={<BallotPage />} />
+                </Route>
+              </Routes>
             </RequireVoter>
           </VoterAuthProvider>
         }
