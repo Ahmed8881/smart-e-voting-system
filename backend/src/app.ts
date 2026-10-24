@@ -5,14 +5,21 @@ import { rateLimit } from 'express-rate-limit'
 import helmet from 'helmet'
 import type { Config } from './config.js'
 import type { Db } from './db.js'
+import type { AiClient } from './lib/aiClient.js'
 import type { Mailer } from './lib/mailer.js'
 import { errorHandler, notFound } from './middleware/errorHandler.js'
 import { adminRouter } from './modules/admin/admin.routes.js'
 import { adminAuthRouter } from './modules/auth/admin-auth.routes.js'
 import { sessionRouter } from './modules/auth/session.routes.js'
+import { registrationRouter } from './modules/voters/registration.routes.js'
 import { healthRouter } from './routes/health.js'
 
-export type Deps = { config: Config; db: Db; mailer: Mailer }
+export type Deps = { config: Config; db: Db; mailer: Mailer; ai: AiClient }
+
+// Endpoints that receive webcam frames get a larger body limit than everything else.
+const CAPTURE_PATHS = new Set(['/api/voters/register'])
+const smallJson = express.json({ limit: '100kb' })
+const captureJson = express.json({ limit: '3mb' })
 
 const tooMany = {
   error: { code: 'RATE_LIMITED', message: 'Too many requests, please try again later' },
@@ -23,7 +30,9 @@ export function createApp(deps: Deps) {
   app.disable('x-powered-by')
   app.use(helmet())
   app.use(cors({ origin: deps.config.CORS_ORIGIN, credentials: true }))
-  app.use(express.json({ limit: '100kb' }))
+  app.use((req, res, next) =>
+    (CAPTURE_PATHS.has(req.path) ? captureJson : smallJson)(req, res, next),
+  )
   app.use(cookieParser())
   app.use(
     '/api',
@@ -38,6 +47,7 @@ export function createApp(deps: Deps) {
     adminAuthRouter(deps),
   )
   app.use('/api/auth', sessionRouter(deps))
+  app.use('/api/voters/register', registrationRouter(deps))
   app.use('/api/admin', adminRouter(deps))
 
   app.use(notFound)

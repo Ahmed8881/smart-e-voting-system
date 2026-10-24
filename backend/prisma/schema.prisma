@@ -268,3 +268,19 @@ model AdminOtp {
 
   @@index([adminId])
 }
+
+enum ChallengePurpose {
+  REGISTRATION
+  LOGIN
+  RECOVERY
+}
+
+/// Liveness challenges issued through the backend. Marking usedAt makes each one single-use,
+/// so a captured submission can't be replayed.
+model LivenessChallenge {
+  nonce     String           @id @db.VarChar(64)
+  purpose   ChallengePurpose
+  expiresAt DateTime         @db.DateTime(3)
+  usedAt    DateTime?        @db.DateTime(3)
+  createdAt DateTime         @default(now()) @db.DateTime(3)
+}

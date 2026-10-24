@@ -6,6 +6,7 @@ import { authOf, requireRole } from '../../middleware/auth.js'
 import { parse } from '../../lib/validate.js'
 import { appendAudit, verifyChain } from '../audit/audit.service.js'
 import { SETTINGS, getSettings, isSettingKey } from '../settings/settings.js'
+import { adminVotersRouter } from '../voters/voters.admin.routes.js'
 
 const pageSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -19,6 +20,7 @@ export function adminRouter(deps: Deps) {
   const { db, config } = deps
   const router = Router()
   router.use(requireRole(config, 'ADMIN'))
+  router.use('/voters', adminVotersRouter(deps))
 
   router.get('/me', async (req, res) => {
     const admin = await db.admin.findUnique({

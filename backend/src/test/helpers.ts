@@ -1,8 +1,10 @@
 import bcrypt from 'bcrypt'
 import request from 'supertest'
+import { randomUUID } from 'node:crypto'
 import { createApp } from '../app.js'
 import { loadConfig } from '../config.js'
 import { type Db, createDb } from '../db.js'
+import type { AiClient, EnrolResult } from '../lib/aiClient.js'
 import type { Mail, Mailer } from '../lib/mailer.js'
 import { GENESIS_HASH } from '../modules/audit/audit.service.js'
 
@@ -28,9 +30,55 @@ export function fakeMailer() {
   return { mailer, sent, lastOtp: () => sent.at(-1)?.text.match(/\b(\d{6})\b/)?.[1] ?? '' }
 }
 
+/** A distinct "person": one-hot embeddings, so same person = similarity 1, different = 0. */
+export function personEmbedding(person: number): string {
+  const v = new Float32Array(128)
+  v[person % 128] = 1
+  return Buffer.from(v.buffer).toString('base64')
+}
+
+/**
+ * Stands in for the AI service. Tests set who is in front of the camera (`person`) and whether
+ * the liveness check passes; challenge tokens encode their nonce like the real service's do.
+ */
+export class FakeAi implements AiClient {
+  person = 1
+  live = true
+  reason: string | null = null
+  calls = 0
+
+  async challenge() {
+    const nonce = randomUUID()
+    return {
+      token: `tok.${nonce}`,
+      nonce,
+      actions: ['BLINK' as const, 'TURN_LEFT' as const],
+      expiresAt: Math.floor(Date.now() / 1000) + 120,
+    }
+  }
+
+  async enrol(token: string, frames: string[]): Promise<EnrolResult> {
+    this.calls++
+    return {
+      nonce: token.split('.')[1] ?? '',
+      live: this.live,
+      reason: this.live ? null : (this.reason ?? 'ACTION_NOT_DETECTED:BLINK'),
+      modelVersion: 'sface_2021dec',
+      frameCount: frames.length,
+      embedding: this.live ? personEmbedding(this.person) : null,
+    }
+  }
+
+  async verify(token: string, frames: string[], reference: string) {
+    const { embedding, ...rest } = await this.enrol(token, frames)
+    return { ...rest, similarity: embedding === null ? null : embedding === reference ? 1 : 0 }
+  }
+}
+
 export function testApp() {
   const mail = fakeMailer()
-  return { app: createApp({ config: testConfig, db, mailer: mail.mailer }), mail }
+  const ai = new FakeAi()
+  return { app: createApp({ config: testConfig, db, mailer: mail.mailer, ai }), mail, ai }
 }
 
 /** Empties every table (children first) and restores the audit chain genesis. */
@@ -46,6 +94,7 @@ export async function resetDb() {
     db.webAuthnCredential.deleteMany(),
     db.faceTemplate.deleteMany(),
     db.voter.deleteMany(),
+    db.livenessChallenge.deleteMany(),
     db.adminOtp.deleteMany(),
     db.refreshToken.deleteMany(),
     db.admin.deleteMany(),

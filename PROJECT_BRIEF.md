@@ -163,7 +163,7 @@ Auth: `POST /auth/admin/login` (password → emails OTP), `POST /auth/admin/otp`
 `POST /auth/voter/face` (step 1), `POST /auth/voter/webauthn/options`,
 `POST /auth/voter/webauthn/verify` (step 2 → tokens).
 
-Voter: `POST /voters/register`, `POST /voters/me/webauthn/register/options|verify`,
+Voter: `POST /voters/register/challenge` (liveness challenge), `POST /voters/register`, `POST /voters/me/webauthn/register/options|verify`,
 `GET /elections/active`, `GET /elections/:id/candidates`, `POST /elections/:id/vote`,
 `GET /me/participation`, `GET /elections/:id/results` (published only), recovery endpoints (Phase 4).
 

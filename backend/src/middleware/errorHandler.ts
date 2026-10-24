@@ -17,6 +17,12 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
       .json({ error: { code: 'INVALID_JSON', message: 'Request body is not valid JSON' } })
     return
   }
+  if (err?.type === 'entity.too.large') {
+    res
+      .status(413)
+      .json({ error: { code: 'PAYLOAD_TOO_LARGE', message: 'Request body is too large' } })
+    return
+  }
   // Never leak internals to the client; log only the message, not request data.
   console.error('Unhandled error:', err instanceof Error ? err.message : err)
   res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } })
