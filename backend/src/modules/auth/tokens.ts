@@ -84,6 +84,15 @@ export async function rotateSession(
 
   const stored = await db.refreshToken.findUnique({ where: { tokenHash: sha256(presented) } })
   if (!stored || stored.expiresAt < new Date()) throw invalid
+  // A suspended/locked voter (or deleted admin) must not be able to extend a session.
+  if (!(await subjectIsActive(db, stored.role, stored.subjectId))) {
+    await db.refreshToken.updateMany({
+      where: { role: stored.role, subjectId: stored.subjectId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    })
+    clearRefreshCookie(res)
+    throw invalid
+  }
 
   // Conditional update: of two concurrent refreshes with the same token, only one can win.
   const { count } = await db.refreshToken.updateMany({
@@ -106,6 +115,11 @@ export async function rotateSession(
 
   const claims = { sub: stored.subjectId, role: stored.role }
   return { claims, accessToken: await issueSession(db, config, res, claims) }
+}
+
+async function subjectIsActive(db: Db, role: Role, id: string) {
+  if (role === 'ADMIN') return (await db.admin.count({ where: { id } })) > 0
+  return (await db.voter.count({ where: { id, status: 'APPROVED' } })) > 0
 }
 
 /** Revokes the presented refresh token, if any. Returns its row for auditing. */

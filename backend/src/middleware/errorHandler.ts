@@ -23,7 +23,12 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
       .json({ error: { code: 'PAYLOAD_TOO_LARGE', message: 'Request body is too large' } })
     return
   }
-  // Never leak internals to the client; log only the message, not request data.
-  console.error('Unhandled error:', err instanceof Error ? err.message : err)
+  // Never leak internals to the client. Logs carry no request data either: database errors can
+  // quote query values (e.g. a CNIC), so production logs only the error's name and code.
+  if (process.env.NODE_ENV === 'production') {
+    console.error('Unhandled error:', err?.name ?? 'Error', err?.code ?? '')
+  } else {
+    console.error('Unhandled error:', err)
+  }
   res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } })
 }

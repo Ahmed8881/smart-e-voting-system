@@ -50,7 +50,7 @@ test('DRAFT: candidates can be added', async () => {
 
 test('ACTIVE: candidates are shown as locked and the next action is closing', async () => {
   renderPage(vi.fn(async () => json(200, election('ACTIVE'))))
-  expect(await screen.findByText(/candidates are locked/)).toBeInTheDocument()
+  expect(await screen.findByText(/Candidates are locked/)).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Add candidate' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Remove Aisha' })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Close voting' })).toBeInTheDocument()

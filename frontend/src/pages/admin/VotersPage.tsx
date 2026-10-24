@@ -77,7 +77,12 @@ export default function VotersPage() {
       </div>
       <ErrorText>{error}</ErrorText>
 
-      <div className="overflow-x-auto rounded-md border bg-white">
+      <div
+        className="relative overflow-x-auto rounded-md border bg-white"
+        tabIndex={0}
+        role="region"
+        aria-label="Voters table"
+      >
         <table className="w-full text-left text-sm">
           <thead className="bg-gray-100 text-gray-700">
             <tr>
@@ -95,7 +100,7 @@ export default function VotersPage() {
             {data?.items.map((v) => (
               <tr key={v.id} className="border-t">
                 <td className="px-3 py-2">{v.name}</td>
-                <td className="px-3 py-2 font-mono">{v.cnic}</td>
+                <td className="px-3 py-2 font-mono whitespace-nowrap">{v.cnic}</td>
                 <td className="px-3 py-2">{v.email}</td>
                 <td className="px-3 py-2 whitespace-nowrap">
                   {new Date(v.createdAt).toLocaleDateString()}

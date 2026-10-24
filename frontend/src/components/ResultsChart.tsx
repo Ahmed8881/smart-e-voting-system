@@ -14,6 +14,7 @@ export default function ResultsChart({ results }: { results: CandidateResult[] }
         <BarChart
           data={results}
           layout="vertical"
+          accessibilityLayer={false}
           margin={{ top: 0, right: 64, bottom: 0, left: 0 }}
         >
           <XAxis type="number" hide domain={[0, 'dataMax']} />

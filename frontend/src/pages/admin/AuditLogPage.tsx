@@ -65,7 +65,12 @@ export default function AuditLogPage() {
       </div>
       <ErrorText>{error}</ErrorText>
 
-      <div className="overflow-x-auto rounded-md border bg-white">
+      <div
+        className="relative overflow-x-auto rounded-md border bg-white"
+        tabIndex={0}
+        role="region"
+        aria-label="Audit log table"
+      >
         <table className="w-full text-left text-sm">
           <thead className="bg-gray-100 text-gray-700">
             <tr>

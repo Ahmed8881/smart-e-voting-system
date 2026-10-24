@@ -1,13 +1,14 @@
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import express from 'express'
-import { rateLimit } from 'express-rate-limit'
+import { ipKeyGenerator, rateLimit } from 'express-rate-limit'
 import helmet from 'helmet'
 import type { Config } from './config.js'
 import type { Db } from './db.js'
 import type { AiClient } from './lib/aiClient.js'
 import type { Mailer } from './lib/mailer.js'
 import { errorHandler, notFound } from './middleware/errorHandler.js'
+import { verifyAccessToken } from './modules/auth/tokens.js'
 import { adminRouter } from './modules/admin/admin.routes.js'
 import { adminAuthRouter } from './modules/auth/admin-auth.routes.js'
 import { sessionRouter } from './modules/auth/session.routes.js'
@@ -40,7 +41,25 @@ export function createApp(deps: Deps) {
   app.use(cookieParser())
   app.use(
     '/api',
-    rateLimit({ windowMs: 60_000, limit: 300, standardHeaders: 'draft-8', message: tooMany }),
+    rateLimit({
+      windowMs: 60_000,
+      limit: 300,
+      standardHeaders: 'draft-8',
+      message: tooMany,
+      // Signed-in requests are limited per account, not per IP: a whole campus or mobile network
+      // can share one public IP, and they must not lock each other out on election day.
+      keyGenerator: (req) => {
+        const header = req.get('authorization')
+        if (header?.startsWith('Bearer ')) {
+          try {
+            return `user:${verifyAccessToken(deps.config, header.slice(7)).sub}`
+          } catch {
+            // invalid token: fall through to the IP
+          }
+        }
+        return ipKeyGenerator(req.ip ?? '')
+      },
+    }),
   )
 
   app.use('/api/health', healthRouter)

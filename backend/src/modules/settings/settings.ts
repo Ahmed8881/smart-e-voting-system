@@ -22,7 +22,8 @@ export const SETTINGS = {
 export type SettingKey = keyof typeof SETTINGS
 export type Settings = { [K in SettingKey]: number }
 
-export const isSettingKey = (key: string): key is SettingKey => key in SETTINGS
+// Own keys only: `in` would also accept inherited names like __proto__ or toString.
+export const isSettingKey = (key: string): key is SettingKey => Object.hasOwn(SETTINGS, key)
 
 export async function getSettings(db: Db): Promise<Settings> {
   const rows = await db.systemSetting.findMany()

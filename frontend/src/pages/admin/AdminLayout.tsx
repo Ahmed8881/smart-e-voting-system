@@ -17,7 +17,7 @@ export default function AdminLayout() {
       <header className="border-b bg-white">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-3">
           <span className="font-semibold">E-Voting Admin</span>
-          <nav aria-label="Admin" className="flex gap-1">
+          <nav aria-label="Admin" className="flex flex-wrap gap-1">
             {links.map((l) => (
               <NavLink
                 key={l.to}

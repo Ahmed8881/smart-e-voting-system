@@ -14,7 +14,8 @@
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:seed": "node --env-file-if-exists=../.env --import tsx prisma/seed.ts"
+    "db:seed": "node --env-file-if-exists=../.env --import tsx prisma/seed.ts",
+    "load-test": "node --env-file-if-exists=../.env --import tsx scripts/load-test.ts"
   },
   "dependencies": {
     "@prisma/adapter-mariadb": "^7.10.1",

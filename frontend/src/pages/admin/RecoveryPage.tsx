@@ -38,7 +38,12 @@ export default function RecoveryPage() {
         identity (e.g. in person or by phone): approval revokes their old device.
       </p>
       <ErrorText>{error}</ErrorText>
-      <div className="overflow-x-auto rounded-md border bg-white">
+      <div
+        className="relative overflow-x-auto rounded-md border bg-white"
+        tabIndex={0}
+        role="region"
+        aria-label="Recovery requests table"
+      >
         <table className="w-full text-left text-sm">
           <thead className="bg-gray-100 text-gray-700">
             <tr>
@@ -54,7 +59,7 @@ export default function RecoveryPage() {
             {requests?.map((r) => (
               <tr key={r.id} className="border-t">
                 <td className="px-3 py-2">{r.voter?.name ?? 'Unknown'}</td>
-                <td className="px-3 py-2 font-mono">{r.voter?.cnic}</td>
+                <td className="px-3 py-2 font-mono whitespace-nowrap">{r.voter?.cnic}</td>
                 <td className="px-3 py-2">{new Date(r.createdAt).toLocaleString()}</td>
                 <td className="space-x-3 px-3 py-2 text-right whitespace-nowrap">
                   <button

@@ -123,7 +123,7 @@ export default function ElectionDetailPage() {
         <h2 className="mb-2 font-semibold">Candidates ({election.candidates.length})</h2>
         {!editable && (
           <p className="mb-2 text-sm text-gray-600">
-            Voting has started, so candidates are locked.
+            Candidates are locked once voting opens.
           </p>
         )}
         <ul className="divide-y rounded-md border bg-white">

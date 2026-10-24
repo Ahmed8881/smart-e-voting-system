@@ -242,6 +242,24 @@ describe('device enrolment and login', () => {
   })
 })
 
+describe('session after the account changes', () => {
+  test.each(['SUSPENDED', 'LOCKED'] as const)(
+    'a %s voter cannot refresh their session, and all their sessions are revoked',
+    async (status) => {
+      const v = await voter()
+      const res = await enrol(new SoftAuthenticator())
+      const cookie = ([] as string[])
+        .concat(res.headers['set-cookie'] ?? [])
+        .find((c) => c.startsWith('rt='))!
+        .split(';')[0]!
+      await db.voter.update({ where: { id: v.id }, data: { status } })
+      const refresh = await request(t.app).post('/api/auth/refresh').set('Cookie', cookie)
+      expect(refresh.status).toBe(401)
+      expect(await db.refreshToken.count({ where: { subjectId: v.id, revokedAt: null } })).toBe(0)
+    },
+  )
+})
+
 describe('step tokens', () => {
   test('a face-step token is not an access token, and vice versa', async () => {
     await voter()

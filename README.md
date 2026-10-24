@@ -97,6 +97,7 @@ Run in each folder:
 |---|---|---|---|---|
 | `backend/` | `npm test` (needs MySQL + `evoting_test`) | `npm run lint` | `npm run format:check` | `npm run build` |
 | `frontend/` | `npm test` | `npm run lint` | `npm run format:check` | `npm run build` |
+| `frontend/` (browser) | `npm run test:e2e` — layout + accessibility on phone and desktop (first: `npx playwright install chromium`) | | | |
 | `ai-service/` | `pytest` | `ruff check .` | `ruff format --check .` | — |
 
 ## Security notes

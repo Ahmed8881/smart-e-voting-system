@@ -44,3 +44,18 @@ describe('error shape', () => {
     expect(res.body.error.code).toBe('INVALID_JSON')
   })
 })
+
+describe('global rate limit', () => {
+  test('signed-in users each get their own budget, even from one shared IP', async () => {
+    const { signAccessToken } = await import('./modules/auth/tokens.js')
+    const { testConfig } = await import('./test/helpers.js')
+    const { app: fresh } = testApp()
+    const as = (sub: string) => ({
+      Authorization: `Bearer ${signAccessToken(testConfig, { sub, role: 'VOTER' })}`,
+    })
+    for (let i = 0; i < 300; i++) await request(fresh).get('/api/health').set(as('voter-a'))
+    expect((await request(fresh).get('/api/health').set(as('voter-a'))).status).toBe(429)
+    expect((await request(fresh).get('/api/health').set(as('voter-b'))).status).toBe(200)
+    expect((await request(fresh).get('/api/health')).status).toBe(200) // anonymous: per-IP budget
+  }, 60_000)
+})
