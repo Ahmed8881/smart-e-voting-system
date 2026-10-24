@@ -160,18 +160,18 @@ N, M, K and thresholds come from `SystemSetting` and are editable in UC-14.
 
 Auth: `POST /auth/admin/login` (password → emails OTP), `POST /auth/admin/otp` (→ tokens),
 `POST /auth/refresh`, `POST /auth/logout`,
-`POST /auth/voter/face` (step 1), `POST /auth/voter/webauthn/options`,
+`POST /auth/voter/challenge`, `POST /auth/voter/face` (step 1 → face token), `POST /auth/voter/webauthn/options`,
 `POST /auth/voter/webauthn/verify` (step 2 → tokens).
 
 Voter: `POST /voters/register/challenge` (liveness challenge), `POST /voters/register`, `POST /voters/me/webauthn/register/options|verify`,
 `GET /elections/active`, `GET /elections/:id/candidates`, `POST /elections/:id/vote`,
-`GET /me/participation`, `GET /elections/:id/results` (published only), recovery endpoints (Phase 4).
+`GET /me`, `GET /me/participation`, `GET /elections/:id/results` (published only), recovery endpoints (Phase 4).
 
 Admin: `GET /admin/me`, CRUD `/admin/elections`, `/admin/elections/:id/candidates`,
 `POST /admin/elections/:id/{schedule|open|close|publish}`, `GET /admin/elections/:id/turnout`,
 `GET /admin/voters?status=`, `POST /admin/voters/:id/{approve|suspend|unlock}`,
 `GET /admin/fraud-alerts`, `PATCH /admin/fraud-alerts/:id`, `GET /admin/audit-log`,
-`GET /admin/audit-log/verify`, `GET|PUT /admin/settings`, `GET /admin/reports/summary` (UC-12).
+`GET /admin/audit-log/verify`, `GET|PUT /admin/settings`, `GET /admin/recovery-requests`, `POST /admin/recovery-requests/:id/{approve|reject}`, `GET /admin/reports/summary` (UC-12).
 
 All admin routes require role `ADMIN`. One error shape everywhere:
 `{ "error": { "code": "STRING", "message": "human readable" } }`.

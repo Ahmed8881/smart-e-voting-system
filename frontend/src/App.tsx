@@ -1,18 +1,40 @@
 import { Navigate, Route, Routes } from 'react-router'
 import { AdminAuthProvider, RequireAdmin } from './auth/AdminAuth.tsx'
+import { RequireVoter, VoterAuthProvider } from './auth/VoterAuth.tsx'
 import AdminLayout from './pages/admin/AdminLayout.tsx'
 import AdminLoginPage from './pages/admin/AdminLoginPage.tsx'
 import AuditLogPage from './pages/admin/AuditLogPage.tsx'
+import RecoveryPage from './pages/admin/RecoveryPage.tsx'
 import SettingsPage from './pages/admin/SettingsPage.tsx'
 import VotersPage from './pages/admin/VotersPage.tsx'
 import HomePage from './pages/HomePage.tsx'
+import LoginPage from './pages/LoginPage.tsx'
 import RegisterPage from './pages/RegisterPage.tsx'
+import VoterHomePage from './pages/voter/VoterHomePage.tsx'
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route
+        path="/login"
+        element={
+          <VoterAuthProvider>
+            <LoginPage />
+          </VoterAuthProvider>
+        }
+      />
+      <Route
+        path="/voter/*"
+        element={
+          <VoterAuthProvider>
+            <RequireVoter>
+              <VoterHomePage />
+            </RequireVoter>
+          </VoterAuthProvider>
+        }
+      />
       <Route
         path="/admin/*"
         element={
@@ -28,6 +50,7 @@ export default function App() {
               >
                 <Route index element={<Navigate to="voters" replace />} />
                 <Route path="voters" element={<VotersPage />} />
+                <Route path="recovery" element={<RecoveryPage />} />
                 <Route path="audit-log" element={<AuditLogPage />} />
                 <Route path="settings" element={<SettingsPage />} />
               </Route>

@@ -3,6 +3,7 @@ import { useAdminAuth } from '../../auth/AdminAuth.tsx'
 
 const links = [
   { to: '/admin/voters', label: 'Voters' },
+  { to: '/admin/recovery', label: 'Device recovery' },
   { to: '/admin/audit-log', label: 'Audit log' },
   { to: '/admin/settings', label: 'Settings' },
 ]

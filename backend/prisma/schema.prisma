@@ -284,3 +284,40 @@ model LivenessChallenge {
   usedAt    DateTime?        @db.DateTime(3)
   createdAt DateTime         @default(now()) @db.DateTime(3)
 }
+
+enum WebAuthnCeremony {
+  REGISTRATION
+  AUTHENTICATION
+}
+
+/// Server-side copy of each WebAuthn challenge, so a response can only answer a challenge we issued, once.
+model WebAuthnChallenge {
+  id        String           @id @default(uuid()) @db.Char(36)
+  voterId   String           @db.Char(36)
+  challenge String           @db.VarChar(128)
+  ceremony  WebAuthnCeremony
+  expiresAt DateTime         @db.DateTime(3)
+  usedAt    DateTime?        @db.DateTime(3)
+  createdAt DateTime         @default(now()) @db.DateTime(3)
+
+  @@index([voterId, ceremony, createdAt])
+}
+
+enum RecoveryStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// Lost-device recovery (brief §5.12): face-verified voter asks, an admin decides.
+model RecoveryRequest {
+  id          String         @id @default(uuid()) @db.Char(36)
+  voterId     String         @db.Char(36)
+  status      RecoveryStatus @default(PENDING)
+  createdAt   DateTime       @default(now()) @db.DateTime(3)
+  decidedAt   DateTime?      @db.DateTime(3)
+  decidedById String?        @db.Char(36)
+
+  @@index([status, createdAt])
+  @@index([voterId])
+}

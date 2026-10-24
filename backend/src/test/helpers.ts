@@ -95,6 +95,8 @@ export async function resetDb() {
     db.faceTemplate.deleteMany(),
     db.voter.deleteMany(),
     db.livenessChallenge.deleteMany(),
+    db.webAuthnChallenge.deleteMany(),
+    db.recoveryRequest.deleteMany(),
     db.adminOtp.deleteMany(),
     db.refreshToken.deleteMany(),
     db.admin.deleteMany(),

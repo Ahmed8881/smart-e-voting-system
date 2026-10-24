@@ -12,6 +12,10 @@ export type AuthClaims = { sub: string; role: Role }
 export const REFRESH_COOKIE = 'rt'
 const ACCESS_TTL = '15m'
 const ISSUER = 'evoting'
+// Distinct audiences so a face-step token can never be used as an API access token, or vice versa.
+const ACCESS_AUDIENCE = 'api'
+const FACE_AUDIENCE = 'voter-face-step'
+const FACE_TTL = '5m'
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: true,
@@ -24,6 +28,7 @@ export function signAccessToken(config: Config, claims: AuthClaims) {
     subject: claims.sub,
     expiresIn: ACCESS_TTL,
     issuer: ISSUER,
+    audience: ACCESS_AUDIENCE,
     algorithm: 'HS256',
   })
 }
@@ -33,6 +38,7 @@ export function verifyAccessToken(config: Config, token: string): AuthClaims {
     const payload = jwt.verify(token, config.JWT_ACCESS_SECRET, {
       algorithms: ['HS256'],
       issuer: ISSUER,
+      audience: ACCESS_AUDIENCE,
     })
     if (typeof payload === 'string' || !payload.sub || !['ADMIN', 'VOTER'].includes(payload.role)) {
       throw new Error('bad claims')
@@ -109,4 +115,35 @@ export async function revokeSession(db: Db, presented: string | undefined) {
   if (!stored || stored.revokedAt) return null
   await db.refreshToken.update({ where: { id: stored.id }, data: { revokedAt: new Date() } })
   return stored
+}
+
+/** What the voter may do after passing the face step. */
+export type FaceStepNext = 'WEBAUTHN_LOGIN' | 'WEBAUTHN_ENROL'
+
+/** Proof that the voter just passed face + liveness (first factor). Valid 5 minutes. */
+export function signFaceToken(config: Config, voterId: string, next: FaceStepNext) {
+  return jwt.sign({ next }, config.JWT_ACCESS_SECRET, {
+    subject: voterId,
+    expiresIn: FACE_TTL,
+    issuer: ISSUER,
+    audience: FACE_AUDIENCE,
+    algorithm: 'HS256',
+  })
+}
+
+export function verifyFaceToken(config: Config, token: unknown, expected: FaceStepNext): string {
+  try {
+    if (typeof token !== 'string') throw new Error('missing')
+    const payload = jwt.verify(token, config.JWT_ACCESS_SECRET, {
+      algorithms: ['HS256'],
+      issuer: ISSUER,
+      audience: FACE_AUDIENCE,
+    })
+    if (typeof payload === 'string' || !payload.sub || payload.next !== expected) {
+      throw new Error('wrong step')
+    }
+    return payload.sub
+  } catch {
+    throw new ApiError(401, 'FACE_STEP_REQUIRED', 'Please verify your face again')
+  }
 }
