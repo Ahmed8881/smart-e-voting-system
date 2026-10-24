@@ -5,6 +5,8 @@ const valid = {
   DATABASE_URL: 'mysql://u:p@localhost:3306/db',
   JWT_ACCESS_SECRET: 'x'.repeat(32),
   CORS_ORIGIN: 'http://localhost:5173',
+  AI_SERVICE_TOKEN: 't'.repeat(32),
+  FACE_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString('base64'),
 }
 
 test('applies defaults', () => {
@@ -24,4 +26,11 @@ test('rejects a short JWT secret', () => {
 
 test('requires SMTP in production', () => {
   expect(() => loadConfig({ ...valid, NODE_ENV: 'production', SMTP_URL: '' })).toThrow(/SMTP_URL/)
+})
+
+test('decodes the face encryption key and rejects the wrong length', () => {
+  expect(loadConfig(valid).FACE_ENCRYPTION_KEY).toHaveLength(32)
+  expect(() =>
+    loadConfig({ ...valid, FACE_ENCRYPTION_KEY: Buffer.alloc(16).toString('base64') }),
+  ).toThrow(/FACE_ENCRYPTION_KEY/)
 })

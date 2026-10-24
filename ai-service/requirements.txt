@@ -1,2 +1,7 @@
 fastapi==0.162.0
 uvicorn[standard]==0.54.0
+numpy==2.5.4
+# mediapipe depends on the contrib build; installing opencv-python(-headless) too would clash.
+opencv-contrib-python==5.0.0.93
+mediapipe==1.1.1
+scikit-learn==1.9.1

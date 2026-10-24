@@ -11,6 +11,8 @@ export const testConfig = loadConfig({
   JWT_ACCESS_SECRET: 'test-secret-'.padEnd(48, 'x'),
   CORS_ORIGIN: 'http://localhost:5173',
   SMTP_URL: '',
+  AI_SERVICE_TOKEN: 'test-service-token-'.padEnd(40, 'x'),
+  FACE_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
 })
 
 export const db: Db = createDb(testConfig.DATABASE_URL)

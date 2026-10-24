@@ -10,6 +10,12 @@ const envSchema = z
     CORS_ORIGIN: z.url(),
     SMTP_URL: z.preprocess((v) => (v === '' ? undefined : v), z.url().optional()),
     MAIL_FROM: z.string().default('E-Voting <no-reply@example.com>'),
+    AI_SERVICE_URL: z.url().default('http://localhost:8001'),
+    AI_SERVICE_TOKEN: z.string().min(32, 'must be at least 32 characters'),
+    FACE_ENCRYPTION_KEY: z
+      .string()
+      .transform((v) => Buffer.from(v, 'base64'))
+      .refine((key) => key.length === 32, 'must be 32 bytes, base64-encoded'),
   })
   .refine((env) => env.NODE_ENV !== 'production' || env.SMTP_URL, {
     message: 'SMTP_URL is required in production',

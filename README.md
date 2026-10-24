@@ -70,7 +70,14 @@ python -m venv .venv
 .venv/Scripts/activate        # Windows (PowerShell: .venv\Scripts\Activate.ps1)
 # source .venv/bin/activate   # macOS / Linux
 pip install -r requirements-dev.txt
-uvicorn app.main:app --reload --port 8001    # http://localhost:8001/health
+python scripts/download_models.py            # ~43 MB, checksum-verified
+uvicorn app.main:app --env-file ../.env --port 8001    # http://localhost:8001/health
+```
+
+Face-recognition accuracy on the public LFW benchmark (downloads ~200 MB once):
+
+```bash
+python scripts/evaluate_face.py
 ```
 
 ### 5. Frontend (new terminal)
