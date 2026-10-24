@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router'
 import { useAdminAuth } from '../../auth/AdminAuth.tsx'
 
 const links = [
+  { to: '/admin/elections', label: 'Elections' },
   { to: '/admin/voters', label: 'Voters' },
   { to: '/admin/recovery', label: 'Device recovery' },
   { to: '/admin/audit-log', label: 'Audit log' },
